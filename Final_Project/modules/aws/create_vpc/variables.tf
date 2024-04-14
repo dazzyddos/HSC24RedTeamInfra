@@ -1,0 +1,3 @@
+variable "avl_zone" {
+
+}

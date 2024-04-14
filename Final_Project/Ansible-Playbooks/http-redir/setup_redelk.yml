@@ -1,0 +1,18 @@
+--- # Setup RedELK on the target redirectors
+- hosts: all
+  become: yes
+  tasks:
+  - name: create /tmp/redirs
+    file: 
+        path: /tmp/redirs
+        state: directory
+
+  - name: Ansible unarchive the redirs.tgz to the target redirector
+    unarchive:
+        src: /home/ubuntu/RedELK/redirs.tgz
+        dest: /tmp/redirs
+
+  - name: Running the install-redir.sh script on the redirector
+    shell: 
+      cmd: ./install-redir.sh {{ HOSTNAME }} shorthaul 10.0.2.103:5044
+      chdir: /tmp/redirs/redirs

@@ -1,0 +1,69 @@
+--- # Setup HTTP Redirector on the target redirectors
+- hosts: all
+  become: yes
+  tasks:
+  - name: Update apt packages
+    apt:
+      update_cache: yes
+
+  - name: Install Apache2
+    apt: 
+        name: "{{ item }}"
+        state: present
+    with_items:
+          - apache2
+          - net-tools
+
+  - name: Enable Apache2 mods (rewrite, proxy, proxy_http)
+    apache2_module: 
+          name: "{{ item }}"
+          state: present
+    with_items:
+          - rewrite
+          - proxy
+          - proxy_http
+
+  - name: Ansible copy files remote to remote
+    copy:
+      src: /tmp/redelk_httpredir.conf
+      dest: /etc/apache2/sites-available/redelk_httpredir.conf
+
+  - name: Ansible replace C2IP with real c2's ip address
+    replace:
+      path: /etc/apache2/sites-available/redelk_httpredir.conf
+      regexp: 'C2IP'
+      replace: "{{ C2IP }}"
+
+  - name: Ansible replace PUBIP
+    replace:
+      path: /etc/apache2/sites-available/redelk_httpredir.conf
+      regexp: 'PUBIP'
+      replace: "{{ PUBIP }}"
+
+  - name: Ansible replace REDIRECT_URL
+    replace:
+      path: /etc/apache2/sites-available/redelk_httpredir.conf
+      regexp: 'REDIRECT_URL'
+      replace: "{{ REDIRECT_URL }}"
+
+  - name: Ansible replace MY_URI
+    replace:
+      path: /etc/apache2/sites-available/redelk_httpredir.conf
+      regexp: 'MY_URI'
+      replace: "{{ MY_URI }}"
+
+  - name: Ansible replace HOSTNAME
+    replace:
+      path: /etc/apache2/sites-available/redelk_httpredir.conf
+      regexp: 'HOSTNAME'
+      replace: "{{ HOSTNAME }}"
+
+  - name: Enabling our configuration
+    shell:
+      cmd: a2ensite redelk_httpredir.conf
+      chdir: /etc/apache2/sites-available
+
+  - name: Reload Apache
+    service: 
+      name: apache2
+      state: reloaded

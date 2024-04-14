@@ -1,0 +1,41 @@
+--- # Setup RedELK on the target HTTPs redirectors
+- hosts: redelk_server
+  become: yes
+  tasks:
+  - name: Install below programs
+    apt: 
+        name: "{{ item }}"
+        state: present
+    with_items:
+          - unzip
+          - tmux
+          - net-tools
+          - build-essential
+
+  - name: create /tmp/elkserver
+    file: 
+        path: /tmp/elkserver
+        state: directory
+
+  - name: Ansible unarchive the elkserver.tgz to the target redirector
+    unarchive:
+        src: /home/ubuntu/RedELK/elkserver.tgz
+        dest: /tmp/elkserver
+
+  - name: Changing the RedELK Interface password
+    command:
+        cmd: sed -i 's/CREDS_redelk=.*urandom.*/CREDS_redelk="redelk@123"/' ./install-elkserver.sh
+        chdir: /tmp/elkserver/elkserver
+    register: install_output
+    ignore_errors: true
+
+  - name: Installing RedElk
+    command:
+        cmd: ./install-elkserver.sh limited
+        chdir: /tmp/elkserver/elkserver
+    register: install_output
+    ignore_errors: true
+
+ #shifted the code to c2 section, now doing it from the c2 server
+  - name: Making the configuration changes
+    shell: echo '*/2 * * * * redelk /usr/share/redelk/bin/getremotelogs.sh {{ C2IP }} {{ C2HOST }} scponly' >> /tmp/elkserver/elkserver/mounts/redelk-config/etc/cron.d/redelk

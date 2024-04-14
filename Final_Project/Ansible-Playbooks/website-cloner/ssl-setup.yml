@@ -1,0 +1,37 @@
+--- # Setup HTTPS Redirector on the target redirectors
+- hosts: all
+  become: yes
+  tasks:
+  - name: Enable Apache2 mods (rewrite, proxy, proxy_http, ssl)
+    apache2_module: 
+        name: "{{ item }}"
+        state: present
+    with_items:
+        - rewrite
+        - proxy
+        - proxy_http
+        - ssl
+        
+  - name: Ansible copy files remote to remote
+    copy:
+      src: /tmp/server-ssl.conf
+      dest: /etc/apache2/sites-available/server-ssl.conf
+
+  - name: Ansible replace DOMAIN with domainname
+    replace:
+      path: /etc/apache2/sites-available/server-ssl.conf
+      regexp: 'DOMAIN'
+      replace: "{{ DOMAIN }}"
+
+  - name: Installing our ssl certification
+    shell: echo 'Y' | certbot certonly -d "{{ DOMAIN }}" --webroot -w /var/www/html/ --register-unsafely-without-email
+
+  - name: Enabling our configuration
+    shell: 
+      cmd: a2ensite server-ssl.conf
+      chdir: /etc/apache2/sites-available
+
+  - name: Reload Apache
+    service: 
+        name: apache2
+        state: reloaded

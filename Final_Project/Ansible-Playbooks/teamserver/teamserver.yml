@@ -1,0 +1,94 @@
+---
+- name: Setup Havoc Environment
+  hosts: all
+  become: yes
+  vars:
+    project_directory: /opt/Havoc
+  tasks:
+  - name: Update apt packages
+    apt:
+      update_cache: yes
+
+  - name: Install below programs
+    apt: 
+        name: "{{ item }}"
+        state: present
+    with_items:
+          - golang
+          - unzip
+          - tmux
+          - net-tools
+          - build-essential
+
+  - name: Clone Havoc repository
+    ansible.builtin.git:
+      repo: 'https://github.com/HavocFramework/Havoc.git'
+      dest: "{{ project_directory }}"
+      clone: yes
+      update: yes
+
+  - name: Add deadsnakes PPA
+    ansible.builtin.apt_repository:
+      repo: 'ppa:deadsnakes/ppa'
+      state: present
+      update_cache: yes
+
+  - name: Install Python 3.10 and development headers
+    ansible.builtin.apt:
+      name:
+        - python3.10
+        - python3.10-dev
+      state: latest
+      update_cache: yes
+
+  - name: Install various development packages
+    ansible.builtin.apt:
+      name:
+        - git
+        - build-essential
+        - apt-utils
+        - cmake
+        - libfontconfig1
+        - libglu1-mesa-dev
+        - libgtest-dev
+        - libspdlog-dev
+        - libboost-all-dev
+        - libncurses5-dev
+        - libgdbm-dev
+        - libssl-dev
+        - libreadline-dev
+        - libffi-dev
+        - libsqlite3-dev
+        - libbz2-dev
+        - mesa-common-dev
+        - qtbase5-dev
+        - qtchooser
+        - qt5-qmake
+        - qtbase5-dev-tools
+        - libqt5websockets5
+        - libqt5websockets5-dev
+        - qtdeclarative5-dev
+        - golang-go
+        - libqt5websockets5-dev
+        - python3-dev
+        - libboost-all-dev
+        - mingw-w64
+        - nasm
+      state: latest
+
+  - name: Go mod download required packages
+    ansible.builtin.command:
+      chdir: "{{ project_directory }}/teamserver"
+      cmd: go mod download golang.org/x/sys
+    register: go_mod_sys
+
+  - name: Go mod download required packages
+    ansible.builtin.command:
+      chdir: "{{ project_directory }}/teamserver"
+      cmd: go mod download github.com/ugorji/go
+    register: go_mod_ugorji
+
+  - name: Install musl Compiler & Build Binary
+    ansible.builtin.make:
+      chdir: "{{ project_directory }}"
+      target: ts-build

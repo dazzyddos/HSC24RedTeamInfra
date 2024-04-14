@@ -1,0 +1,30 @@
+---
+- name: Install RedELK with Ansible
+  hosts: localhost # gonna run on bastion host from bastion host
+  connection: local
+  become: yes  # Use sudo for tasks that require it
+  vars:
+    redelk_repo: "https://github.com/outflanknl/RedELK"
+    redelk_install_dir: "/home/ubuntu/RedELK"
+    config_file_source: "/tmp/redelkconfig.cnf"  # we will move this from our local machine
+    config_file_dest: "{{ redelk_install_dir }}/certs/config.cnf"
+
+  tasks:
+    - name: Clone RedELK repository
+      ansible.builtin.git:
+        repo: "{{ redelk_repo }}"
+        dest: "{{ redelk_install_dir }}"
+        clone: yes
+        update: yes
+
+    - name: Move configuration file to RedELK directory
+      ansible.builtin.copy:
+        src: "{{ config_file_source }}"
+        dest: "{{ config_file_dest }}"
+        remote_src: no  # Change to yes if the file is already on the remote machine
+
+    - name: Run initial setup script
+      ansible.builtin.shell:
+        cmd: "./initial-setup.sh certs/config.cnf"
+        chdir: "{{ redelk_install_dir }}"
+        executable: /bin/bash

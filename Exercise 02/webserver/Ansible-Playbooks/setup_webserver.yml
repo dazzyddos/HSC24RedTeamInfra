@@ -1,0 +1,22 @@
+---
+- hosts: webserver
+  become: yes
+  tasks:
+  - name: Update apt packages
+    apt:
+      update_cache: yes
+
+  - name: Install Apache2
+    apt: 
+        name: "{{ item }}"
+        state: present
+    with_items:
+          - apache2
+          - net-tools
+          
+  - name: Ensure Apache is running
+    service:
+      name: apache2
+      state: started
+      enabled: yes
+  

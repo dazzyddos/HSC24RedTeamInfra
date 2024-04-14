@@ -1,0 +1,22 @@
+[req]
+distinguished_name = req_distinguished_name
+x509_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+emailAddress = root@localdomain
+
+[v3_ca]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+basicConstraints = CA:TRUE
+
+[v3_req]
+keyUsage = keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+# Enter the valid IP or DNS where the teamservers and redirectors can reach your ELK server in the fields below. If not done correclty, Logstash on your ELK server will crash with cryptic errors.
+IP.1 = 127.0.0.1
+IP.2 = 10.0.2.103 # we are using static internal IP for our redelk server

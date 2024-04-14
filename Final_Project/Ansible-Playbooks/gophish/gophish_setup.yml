@@ -1,0 +1,125 @@
+---
+# Setup Gophish
+- hosts: all
+  become: yes
+  tasks:
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+
+    - name: Install necessary tools
+      apt: 
+        name: "{{ item }}"
+        state: present
+      loop:
+        - unzip
+        - golang
+        - sqlite3
+        - net-tools
+
+    - name: checking if gophish already exists
+      stat:
+        path: /opt/gophish
+      register: register_name
+
+    - name: Clone gophish repository
+      git:
+        repo: 'https://github.com/kgretzky/gophish'
+        dest: '/opt/gophish'
+      when: not register_name.stat.exists
+
+    - name: Remove X-Server
+      lineinfile:
+        path: /opt/gophish/controllers/phish.go
+        regexp: '^.*X-Server.*$'
+        state: absent
+        mode: 0644
+
+    - name: Change Rid
+      replace:
+        path: /opt/gophish/controllers/phish.go
+        regexp: '"rid"'
+        replace: '"fname"'
+
+    - name: shell command to build the gophish
+      shell: |
+        cd /opt/gophish && go build .
+
+    - name: shell command for chmod
+      shell: chmod 755 /opt/gophish/gophish
+
+    - name: Create a user gophish
+      user:
+        name: gophish
+        comment: user created for running gophish
+
+    - name: create /var/log/gophish
+      file:
+        path: /var/log/gophish
+        state: directory
+        mode: '0755'
+        owner: gophish
+
+    - name: Update permissions for /opt/gophish
+      file:
+        path: /opt/gophish
+        state: directory
+        mode: '0755'
+        owner: gophish
+        recurse: yes
+
+    - name: Create GoPhish service file
+      copy:
+        dest: /lib/systemd/system/gophish.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Gophish Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          WorkingDirectory=/opt/gophish
+          User=gophish
+          Environment='STDOUT=/var/log/gophish/gophish.log'
+          Environment='STDERR=/var/log/gophish/gophish.log'
+          PIDFile=/var/run/gophish
+          ExecStart=/bin/sh -c "/opt/gophish/gophish >> ${STDOUT} 2>> ${STDERR}"
+
+          [Install]
+          WantedBy=multi-user.target
+          Alias=gophish.service
+      notify:
+        - Reload systemd
+        - Enable and start GoPhish service
+
+    - name: Ansible replace string 127.0.0.1 with instance's private ip
+      replace:
+        path: /opt/gophish/config.json
+        regexp: '127.0.0.1'
+        replace: "{{ PRIVATE_IP }}"
+
+    - name: Enable and start GoPhish service
+      systemd:
+        name: gophish
+        enabled: yes
+        state: started
+
+    - name: shell command to update the password to 'gophish@123'
+      command:
+        cmd: sqlite3 /opt/gophish/gophish.db 'update users set hash="$2a$10$pAbhayqOUEn8iSHvgkcmNe3VmpAWxjGDAuTGNrv4uIHRY3upXMB7." where username="admin";'
+
+    - name: shell command to disable password change at login
+      command:
+        cmd: sqlite3 /opt/gophish/gophish.db 'update users set password_change_required="0" where username="admin";'
+
+  handlers:
+      - name: Reload systemd
+        systemd:
+          daemon_reload: yes
+
+      - name: Enable and start GoPhish service
+        systemd:
+          name: gophish
+          enabled: yes
+          state: started

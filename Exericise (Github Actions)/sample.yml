@@ -1,0 +1,28 @@
+# create an access token from developer settings and then put that access token in repo -> settings -> security -> secrets and variables -> actions
+name: Keyword Replacement
+
+on:
+  push:
+    paths:
+      - '**.txt' # This will trigger the workflow for any .txt files changed
+
+jobs:
+  replace-keyword:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.ACCESSTOKEN }}
+
+    - name: Replace keyword
+      run: |
+        find . -type f -name "*.txt" -exec sed -i 's/windows/linux/g' {} +
+
+    - name: Commit changes
+      run: |
+        git config --global user.name 'dazzyddos'
+        git config --global user.email 'hackerarunnair@gmail.com'
+        git commit -am "Replace keyword in text files" --allow-empty # This will not create a commit if there are no changes
+        git push

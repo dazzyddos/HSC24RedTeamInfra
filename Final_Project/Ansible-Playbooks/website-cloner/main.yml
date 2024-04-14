@@ -1,0 +1,43 @@
+---
+- name: Clone website and serve with Apache
+  hosts: all
+  become: yes
+  vars:
+    website_url: "{{ website_url }}"  # This variable will be provided on the command line
+
+  tasks:
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+
+    - name: Install below programs
+      apt: 
+          name: "{{ item }}"
+          state: present
+      with_items:
+          - apache2
+          - python3
+          - wget
+          - golang
+          - unzip
+          - tmux
+          - net-tools
+          - certbot
+          - python3-certbot-apache
+          - build-essential
+
+    - name: Clone the website
+      command: wget --mirror --convert-links --adjust-extension --page-requisites --no-parent -P /var/www/html {{ website_url }}
+      args:
+        chdir: /var/www/html/
+      ignore_errors: yes
+
+    - name: move all files to webserver root folder (/var/www/html)
+      ansible.builtin.shell: mv /var/www/html/{{ website_url }}/* /var/www/html/
+
+    - name: Ensure Apache is running and enabled
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
